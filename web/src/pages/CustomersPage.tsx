@@ -247,11 +247,13 @@ export default function CustomersPage() {
                         ) : (
                             customers.map((customer) => (
                                 <TableRow key={customer.id}>
-                                    <TableCell>{customer.customerId}</TableCell>
-                                    <TableCell>{customer.name}</TableCell>
-                                    <TableCell>{customer.emailAddress || "-"}</TableCell>
-                                    <TableCell>{customer.createdByName || customer.createdBy || "-"}</TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="py-1">{customer.customerId}</TableCell>
+                                    <TableCell className="py-1">{customer.name}</TableCell>
+                                    <TableCell className="py-1">{customer.emailAddress || "-"}</TableCell>
+                                    <TableCell className="py-1">{customer.createdByName || customer.createdBy || "-"}</TableCell>
+
+                                    <TableCell className="text-right py-1">
+
                                         <Button
                                             variant="ghost"
                                             size="icon"

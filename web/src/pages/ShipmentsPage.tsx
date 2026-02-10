@@ -656,41 +656,41 @@ export default function ShipmentsPage() {
                         ) : (
                             shipments.map((shipment) => (
                                 <TableRow key={shipment.id}>
-                                    <TableCell>{shipment.shipmentNumber}</TableCell>
-                                    <TableCell>{getCustomerName(shipment.customerId)}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-1">{shipment.shipmentNumber}</TableCell>
+                                    <TableCell className="py-1">{getCustomerName(shipment.customerId)}</TableCell>
+                                    <TableCell className="py-1">
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(shipment.status)}`}>
                                             {formatStatus(shipment.status)}
                                         </span>
                                     </TableCell>
-                                    <TableCell>{shipment.createdByName || shipment.createdBy || "-"}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-1">{shipment.createdByName || shipment.createdBy || "-"}</TableCell>
+                                    <TableCell className="py-1">
                                         {shipment.r2FileKey ? (
-                                            <div className="flex flex-col gap-1">
+                                            <div className="flex flex-row gap-2 items-center">
                                                 <button
                                                     onClick={() => handleDownload(shipment.id, shipment.shipmentNumber)}
-                                                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
                                                     title="Download Original"
                                                 >
                                                     <span className="text-lg">{getFileIcon(shipment.r2FileKey)}</span>
-                                                    <span className="text-xs">Original</span>
-                                                    <Download className="h-3 w-3" />
+                                                    {/* <span className="text-xs">Original</span> */}
                                                 </button>
                                                 <button
                                                     onClick={() => handleDownload(shipment.id, shipment.shipmentNumber, 'stamped')}
-                                                    className="flex items-center gap-2 text-green-600 hover:text-green-800 transition-colors"
+                                                    className="flex items-center gap-1 text-green-600 hover:text-green-800 transition-colors"
                                                     title="Download Stamped PDF"
                                                 >
                                                     <span className="text-lg">✅</span>
-                                                    <span className="text-xs">Stamped</span>
-                                                    <Download className="h-3 w-3" />
+                                                    {/* <span className="text-xs">Stamped</span> */}
                                                 </button>
                                             </div>
+
                                         ) : (
                                             <span className="text-muted-foreground text-sm">No file</span>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right">
+                                    <TableCell className="text-right py-1">
+
                                         <Button
                                             variant="ghost"
                                             size="icon"

@@ -125,7 +125,10 @@ app.post("/", async (c) => {
         let frontendUrl = origin;
         if (origin.includes("localhost:8787")) {
             frontendUrl = origin.replace("8787", "5173");
+        } else if (origin.includes("workers.dev")) {
+            frontendUrl = "https://opexio-web.pages.dev";
         }
+
 
         const verificationUrl = `${frontendUrl}/verify/${publicToken}`;
 
