@@ -3,11 +3,11 @@ import { cors } from "hono/cors";
 import { auth } from "./auth";
 
 import customers from "./routes/customers";
+import publicRoutes from "./routes/public";
 import shipments from "./routes/shipments";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-// CORS middleware for frontend
 app.use("/*", cors({
   origin: (origin) => {
     // Allow localhost for development
@@ -23,6 +23,7 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => {
   return auth(c.env, c.req.raw).handler(c.req.raw);
 });
 
+app.route("/public", publicRoutes);
 app.route("/api/customers", customers);
 app.route("/api/shipments", shipments);
 

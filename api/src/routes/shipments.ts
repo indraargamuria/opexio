@@ -99,24 +99,62 @@ app.post("/", async (c) => {
             return c.json({ error: "Validation failed", details: validation.error.issues }, 400);
         }
 
+        // Validate file type
+        if (file.type !== "application/pdf") {
+            return c.json({ error: "Only PDF files are allowed" }, 400);
+        }
+
         const { header, details } = validation.data;
         const now = new Date();
         const headerId = uuidv4();
+        const publicToken = uuidv4();
 
         // Upload file to R2 with error handling
-        console.log(`Uploading file for shipment ${header.shipmentNumber}...`);
+        console.log(`Processing shipment ${header.shipmentNumber}...`);
+
+        // 1. Prepare Original File
+        const originalFileKey = `shipments/${header.shipmentNumber}/original.pdf`;
+        const originalBuffer = await file.arrayBuffer();
+
+        // 2. Generate Stamped PDF
+        // Construct public URL. using origin from request or fallback
+        const origin = new URL(c.req.url).origin;
+        // In local dev, API is 8787, Web is 5173. 
+        // Ideally we use an env var for FRONTEND_URL.
+        // For now, if origin contains 8787, replace with 5173 for dev convenience.
+        let frontendUrl = origin;
+        if (origin.includes("localhost:8787")) {
+            frontendUrl = origin.replace("8787", "5173");
+        }
+
+        const verificationUrl = `${frontendUrl}/verify/${publicToken}`;
+
+        let stampedBuffer: Uint8Array;
         try {
-            fileKey = `shipments/${header.shipmentNumber}/${file.name}`;
-            const arrayBuffer = await file.arrayBuffer();
-            await c.env.MY_BUCKET.put(fileKey, arrayBuffer, {
-                httpMetadata: {
-                    contentType: file.type
-                }
+            const { stampPdfWithQr } = await import("../lib/pdf");
+            stampedBuffer = await stampPdfWithQr(originalBuffer, verificationUrl);
+        } catch (error) {
+            console.error("PDF Stamping failed:", error);
+            return c.json({ error: "Failed to process PDF file" }, 500);
+        }
+
+        const stampedFileKey = `shipments/${header.shipmentNumber}/stamped.pdf`;
+
+        try {
+            // Upload Original
+            await c.env.MY_BUCKET.put(originalFileKey, originalBuffer, {
+                httpMetadata: { contentType: "application/pdf" }
             });
-            console.log(`File uploaded successfully: ${fileKey}`);
+
+            // Upload Stamped
+            await c.env.MY_BUCKET.put(stampedFileKey, stampedBuffer, {
+                httpMetadata: { contentType: "application/pdf" }
+            });
+
+            console.log(`Files uploaded: ${originalFileKey}, ${stampedFileKey}`);
         } catch (error) {
             console.error("R2 upload failed:", error);
-            return c.json({ error: "Failed to upload file to storage" }, 500);
+            return c.json({ error: "Failed to upload files to storage" }, 500);
         }
 
         // Prepare database records
@@ -124,7 +162,10 @@ app.post("/", async (c) => {
             id: headerId,
             shipmentNumber: header.shipmentNumber,
             customerId: header.customerId,
-            r2FileKey: fileKey,
+            r2FileKey: originalFileKey,
+            stampedFileKey: stampedFileKey,
+            publicToken: publicToken,
+            isLinkActive: true,
             status: header.status,
             createdBy: session.user.id,
             createdAt: now,
@@ -149,19 +190,17 @@ app.post("/", async (c) => {
                 db.insert(shipmentHeader).values(newHeader),
                 ...newDetails.map(detail => db.insert(shipmentDetail).values(detail))
             ]);
-            console.log(`Successfully created shipment ${headerId} with ${newDetails.length} detail(s)`);
+            console.log(`Successfully created shipment ${headerId}`);
         } catch (error) {
             console.error("Database insert failed:", error);
 
-            // Try to clean up R2 file since database failed
-            if (fileKey) {
-                try {
-                    console.log(`Cleaning up R2 file: ${fileKey}`);
-                    await c.env.MY_BUCKET.delete(fileKey);
-                    console.log("R2 file cleanup successful");
-                } catch (cleanupError) {
-                    console.error("Failed to cleanup R2 file:", cleanupError);
-                }
+            // Try to clean up R2 files
+            try {
+                await c.env.MY_BUCKET.delete(originalFileKey);
+                await c.env.MY_BUCKET.delete(stampedFileKey);
+                console.log("R2 file cleanup successful");
+            } catch (cleanupError) {
+                console.error("Failed to cleanup R2 files:", cleanupError);
             }
 
             return c.json({
@@ -274,6 +313,7 @@ app.get("/:id/file", async (c) => {
     const db = dbStart(c.env.DB);
     const id = c.req.param("id");
     const download = c.req.query("download") === "true"; // Check if download is requested
+    const type = c.req.query("type"); // 'original' (default) or 'stamped'
 
     const shipment = await db
         .select()
@@ -285,19 +325,36 @@ app.get("/:id/file", async (c) => {
         return c.json({ error: "Shipment not found" }, 404);
     }
 
-    if (!shipment.r2FileKey) {
+    let fileKey = shipment.r2FileKey;
+    let filenameSuffix = "";
+
+    if (type === 'stamped') {
+        if (!shipment.stampedFileKey) {
+            return c.json({ error: "Stamped file not available" }, 404);
+        }
+        fileKey = shipment.stampedFileKey;
+        filenameSuffix = "-stamped";
+    } else if (!fileKey) {
         return c.json({ error: "No file attached" }, 404);
     }
 
+    if (!fileKey) {
+        return c.json({ error: "File key not found" }, 404);
+    }
+
     // Get the file from R2
-    const object = await c.env.MY_BUCKET.get(shipment.r2FileKey);
+    const object = await c.env.MY_BUCKET.get(fileKey);
 
     if (!object) {
         return c.json({ error: "File not found in storage" }, 404);
     }
 
-    // Extract filename from R2 key
-    const filename = shipment.r2FileKey.split('/').pop() || 'download';
+    // Extract filename from R2 key or shipment number
+    let filename = fileKey.split('/').pop() || 'download';
+
+    // If we want a cleaner filename based on shipment number
+    const ext = filename.split('.').pop() || 'pdf';
+    filename = `${shipment.shipmentNumber}${filenameSuffix}.${ext}`;
 
     // Return the file with appropriate Content-Disposition
     return new Response(object.body, {

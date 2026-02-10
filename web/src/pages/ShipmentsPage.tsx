@@ -37,6 +37,7 @@ interface ShipmentDetail {
     status: string;
     createdAt: string;
     updatedAt: string;
+    qtyDelivered?: number | null; // Add qtyDelivered
 }
 
 interface Shipment {
@@ -82,8 +83,9 @@ export default function ShipmentsPage() {
         itemCode: string;
         itemDescription: string;
         quantity: string;
+        qtyDelivered: string; // Add qtyDelivered to state
         status: string;
-    }>>([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+    }>>([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -164,7 +166,7 @@ export default function ShipmentsPage() {
     };
 
     const addDetailItem = () => {
-        setDetailItems([...detailItems, { itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+        setDetailItems([...detailItems, { itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
     };
 
     const removeDetailItem = (index: number) => {
@@ -211,7 +213,7 @@ export default function ShipmentsPage() {
                 console.log("Shipment created successfully:", result);
                 setIsDialogOpen(false);
                 setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
-                setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+                setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
                 setSelectedFile(null);
                 setFilePreview(null);
                 await fetchShipments();
@@ -262,7 +264,7 @@ export default function ShipmentsPage() {
                 setIsEditDialogOpen(false);
                 setCurrentShipment(null);
                 setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
-                setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+                setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
                 fetchShipments();
             } else {
                 console.error("Failed to update shipment");
@@ -293,9 +295,9 @@ export default function ShipmentsPage() {
         }
     };
 
-    const handleDownload = async (shipmentId: string, shipmentNumber: string) => {
+    const handleDownload = async (shipmentId: string, shipmentNumber: string, type: 'original' | 'stamped' = 'original') => {
         try {
-            const res = await fetch(`${API_URL}/api/shipments/${shipmentId}/file?download=true`, {
+            const res = await fetch(`${API_URL}/api/shipments/${shipmentId}/file?download=true&type=${type}`, {
                 credentials: "include",
             });
 
@@ -354,10 +356,11 @@ export default function ShipmentsPage() {
                         itemCode: detail.itemCode,
                         itemDescription: detail.itemDescription || "",
                         quantity: detail.quantity.toString(),
+                        qtyDelivered: detail.qtyDelivered !== undefined && detail.qtyDelivered !== null ? detail.qtyDelivered.toString() : "",
                         status: detail.status,
                     })));
                 } else {
-                    setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+                    setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
                 }
 
                 setIsEditDialogOpen(true);
@@ -369,7 +372,7 @@ export default function ShipmentsPage() {
 
     const resetCreateDialog = () => {
         setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
-        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
         setSelectedFile(null);
         setFilePreview(null);
     };
@@ -377,7 +380,7 @@ export default function ShipmentsPage() {
     const resetEditDialog = () => {
         setCurrentShipment(null);
         setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
-        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", qtyDelivered: "", status: "pending" }]);
     };
 
     const handleCreateDialogChange = (open: boolean) => {
@@ -663,14 +666,26 @@ export default function ShipmentsPage() {
                                     <TableCell>{shipment.createdByName || shipment.createdBy || "-"}</TableCell>
                                     <TableCell>
                                         {shipment.r2FileKey ? (
-                                            <button
-                                                onClick={() => handleDownload(shipment.id, shipment.shipmentNumber)}
-                                                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
-                                                title="Download file"
-                                            >
-                                                <span className="text-lg">{getFileIcon(shipment.r2FileKey)}</span>
-                                                <Download className="h-3 w-3" />
-                                            </button>
+                                            <div className="flex flex-col gap-1">
+                                                <button
+                                                    onClick={() => handleDownload(shipment.id, shipment.shipmentNumber)}
+                                                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                                    title="Download Original"
+                                                >
+                                                    <span className="text-lg">{getFileIcon(shipment.r2FileKey)}</span>
+                                                    <span className="text-xs">Original</span>
+                                                    <Download className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownload(shipment.id, shipment.shipmentNumber, 'stamped')}
+                                                    className="flex items-center gap-2 text-green-600 hover:text-green-800 transition-colors"
+                                                    title="Download Stamped PDF"
+                                                >
+                                                    <span className="text-lg">✅</span>
+                                                    <span className="text-xs">Stamped</span>
+                                                    <Download className="h-3 w-3" />
+                                                </button>
+                                            </div>
                                         ) : (
                                             <span className="text-muted-foreground text-sm">No file</span>
                                         )}
@@ -726,6 +741,7 @@ export default function ShipmentsPage() {
                             <Select
                                 value={formData.customerId}
                                 onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
+                                disabled={formData.status === "Delivered"} // Disable if delivered
                             >
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue placeholder="Select customer" />
@@ -746,6 +762,7 @@ export default function ShipmentsPage() {
                             <Select
                                 value={formData.status}
                                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                                disabled={formData.status === "Delivered"} // Disable if delivered
                             >
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue />
@@ -761,16 +778,18 @@ export default function ShipmentsPage() {
                         <div className="col-span-4 border-t pt-4 mt-2">
                             <div className="flex justify-between items-center mb-4">
                                 <Label className="text-lg font-semibold">Detail Items</Label>
-                                <Button type="button" size="sm" onClick={addDetailItem}>
-                                    <Plus className="mr-2 h-4 w-4" /> Add Item
-                                </Button>
+                                {formData.status !== "Delivered" && ( // Hide Add button if delivered
+                                    <Button type="button" size="sm" onClick={addDetailItem}>
+                                        <Plus className="mr-2 h-4 w-4" /> Add Item
+                                    </Button>
+                                )}
                             </div>
                             {detailItems.map((detail, index) => (
                                 <div key={index} className="border rounded-lg p-4 mb-3 relative pl-12">
                                     <div className="absolute -top-3 -left-3 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold shadow-md">
                                         {index + 1}
                                     </div>
-                                    {detailItems.length > 1 && (
+                                    {detailItems.length > 1 && formData.status !== "Delivered" && ( // Hide Remove button if delivered
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -790,17 +809,32 @@ export default function ShipmentsPage() {
                                                     value={detail.itemCode}
                                                     onChange={(e) => handleDetailChange(index, "itemCode", e.target.value)}
                                                     placeholder="e.g., ITEM-001"
+                                                    disabled={formData.status === "Delivered"}
                                                 />
                                             </div>
                                             <div>
                                                 <Label htmlFor={`edit-quantity-${index}`}>Quantity</Label>
-                                                <Input
-                                                    id={`edit-quantity-${index}`}
-                                                    type="number"
-                                                    value={detail.quantity}
-                                                    onChange={(e) => handleDetailChange(index, "quantity", e.target.value)}
-                                                    placeholder="0"
-                                                />
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id={`edit-quantity-${index}`}
+                                                        type="number"
+                                                        value={detail.quantity}
+                                                        onChange={(e) => handleDetailChange(index, "quantity", e.target.value)}
+                                                        placeholder="0"
+                                                        disabled={formData.status === "Delivered"}
+                                                    />
+                                                    {formData.status === "Delivered" && (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-semibold whitespace-nowrap">/ Delivered:</span>
+                                                            <Input
+                                                                type="number"
+                                                                value={detail.qtyDelivered}
+                                                                disabled
+                                                                className="w-20 bg-green-50 border-green-200 text-green-800"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div>
@@ -810,6 +844,7 @@ export default function ShipmentsPage() {
                                                 value={detail.itemDescription}
                                                 onChange={(e) => handleDetailChange(index, "itemDescription", e.target.value)}
                                                 placeholder="Item description"
+                                                disabled={formData.status === "Delivered"}
                                             />
                                         </div>
                                     </div>
@@ -817,56 +852,83 @@ export default function ShipmentsPage() {
                             ))}
                         </div>
 
-                        {/* File Preview in Edit Dialog */}
-                        {currentShipment?.r2FileKey && (
-                            <div className="col-span-4 border-t pt-4 mt-2">
-                                <Label className="text-sm font-semibold mb-2 block">Attached Document</Label>
-                                <div className="border rounded-lg p-4 bg-muted/30">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl">{getFileIcon(currentShipment.r2FileKey)}</span>
-                                            <div>
-                                                <p className="font-medium text-sm">{currentShipment.r2FileKey.split('/').pop()}</p>
-                                                <p className="text-xs text-muted-foreground">Document preview below</p>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDownload(currentShipment.id, currentShipment.shipmentNumber)}
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Download
-                                        </Button>
-                                    </div>
-                                    {currentShipment.r2FileKey.toLowerCase().endsWith('.pdf') && (
-                                        <div className="mt-3">
-                                            <iframe
-                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file#toolbar=0&navpanes=0&scrollbar=0`}
-                                                className="w-full h-96 rounded border"
-                                                title="PDF Preview"
-                                            />
-                                        </div>
-                                    )}
-                                    {['png', 'jpg', 'jpeg', 'gif', 'webp'].some(ext => currentShipment.r2FileKey?.toLowerCase().endsWith(`.${ext}`)) && (
-                                        <div className="mt-3">
-                                            <img
-                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file`}
-                                                alt="Document preview"
-                                                className="max-h-96 rounded border mx-auto"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
+                        {/* Existing Documents Section */}
+                        <div className="col-span-4 border-t pt-4 mt-2">
+                            <Label className="text-lg font-semibold mb-3 block">Documents</Label>
+                            <div className="flex gap-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => currentShipment && handleDownload(currentShipment.id, currentShipment.shipmentNumber, 'original')}
+                                >
+                                    <Download className="mr-2 h-4 w-4" /> Original PDF
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="text-green-600 border-green-200 hover:bg-green-50"
+                                    onClick={() => currentShipment && handleDownload(currentShipment.id, currentShipment.shipmentNumber, 'stamped')}
+                                >
+                                    <Download className="mr-2 h-4 w-4" /> Stamped PDF (Verified)
+                                </Button>
                             </div>
-                        )}
-                    </div>
+                        </div>
+
+                        {/* File Preview in Edit Dialog */}
+                        {
+                            currentShipment?.r2FileKey && (
+                                <div className="col-span-4 border-t pt-4 mt-2">
+                                    <Label className="text-sm font-semibold mb-2 block">Attached Document</Label>
+                                    <div className="border rounded-lg p-4 bg-muted/30">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">{getFileIcon(currentShipment.r2FileKey)}</span>
+                                                <div>
+                                                    <p className="font-medium text-sm">{currentShipment.r2FileKey.split('/').pop()}</p>
+                                                    <p className="text-xs text-muted-foreground">Document preview below</p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleDownload(currentShipment.id, currentShipment.shipmentNumber)}
+                                            >
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Download
+                                            </Button>
+                                        </div>
+                                        {currentShipment.r2FileKey.toLowerCase().endsWith('.pdf') && (
+                                            <div className="mt-3">
+                                                <iframe
+                                                    src={`${API_URL}/api/shipments/${currentShipment.id}/file#toolbar=0&navpanes=0&scrollbar=0`}
+                                                    className="w-full h-96 rounded border"
+                                                    title="PDF Preview"
+                                                />
+                                            </div>
+                                        )}
+                                        {['png', 'jpg', 'jpeg', 'gif', 'webp'].some(ext => currentShipment.r2FileKey?.toLowerCase().endsWith(`.${ext}`)) && (
+                                            <div className="mt-3">
+                                                <img
+                                                    src={`${API_URL}/api/shipments/${currentShipment.id}/file`}
+                                                    alt="Document preview"
+                                                    className="max-h-96 rounded border mx-auto"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        }
+                    </div >
                     <DialogFooter>
-                        <Button onClick={handleUpdate}>Update</Button>
+                        {formData.status !== "Delivered" && (
+                            <Button onClick={handleUpdate}>Update</Button>
+                        )}
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Close</Button>
                     </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
+                </DialogContent >
+            </Dialog >
+        </div >
     );
 }

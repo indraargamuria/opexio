@@ -9,12 +9,15 @@
     },
     "dependencies": {
         "@types/bcryptjs": "^2.4.6",
+        "@types/qr-image": "^3.2.9",
         "@types/uuid": "^10.0.0",
         "bcryptjs": "^3.0.3",
         "better-auth": "^1.4.18",
         "drizzle-kit": "^0.31.9",
         "drizzle-orm": "^0.45.1",
         "hono": "^4.11.9",
+        "pdf-lib": "^1.17.1",
+        "qr-image": "^3.2.0",
         "uuid": "^13.0.0"
     },
     "devDependencies": {

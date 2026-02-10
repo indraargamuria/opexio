@@ -61,7 +61,11 @@ export const shipmentHeader = sqliteTable("shipmentHeader", {
     shipmentNumber: text("shipmentNumber").notNull().unique(),
     customerId: text("customerId").notNull().references(() => customers.id),
     r2FileKey: text("r2FileKey"),
+    stampedFileKey: text("stampedFileKey"),
     status: text("status").notNull(),
+    publicToken: text("publicToken").unique(),
+    isLinkActive: integer("isLinkActive", { mode: "boolean" }).default(true),
+    deliveryComments: text("deliveryComments"),
     createdBy: text("createdBy").references(() => user.id),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
@@ -73,6 +77,7 @@ export const shipmentDetail = sqliteTable("shipmentDetail", {
     itemCode: text("itemCode").notNull(),
     itemDescription: text("itemDescription"),
     quantity: integer("quantity").notNull(),
+    qtyDelivered: integer("qtyDelivered"),
     status: text("status").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()

@@ -48,10 +48,13 @@ import CustomersPage from "./pages/CustomersPage";
 import ShipmentsPage from "./pages/ShipmentsPage";
 import InvoicesPage from "./pages/InvoicesPage";
 
+import VerifyShipmentPage from "./pages/VerifyShipmentPage";
+
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/verify/:token" element={<VerifyShipmentPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route
           path="/login"
