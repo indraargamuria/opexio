@@ -17,7 +17,7 @@ app.use("/*", cors({
 }));
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => {
-  return auth(c.env).handler(c.req.raw);
+  return auth(c.env, c.req.raw).handler(c.req.raw);
 });
 
 app.get("/", (c) => {
