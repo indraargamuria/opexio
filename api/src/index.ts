@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { auth } from "./auth";
 
 import customers from "./routes/customers";
+import shipments from "./routes/shipments";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -23,6 +24,7 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => {
 });
 
 app.route("/api/customers", customers);
+app.route("/api/shipments", shipments);
 
 app.get("/", (c) => {
   return c.text("Hello Hono with Better Auth!");

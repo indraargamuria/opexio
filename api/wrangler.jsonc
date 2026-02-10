@@ -15,6 +15,13 @@
       "preview_database_id": "b096e92a-1cf2-4525-80f5-fe79eb4a7f46"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "MY_BUCKET",
+      "bucket_name": "opexio-shipment-files",
+      "preview_bucket_name": "opexio-shipment-files"
+    }
+  ],
   "env": {
     "production": {
       "d1_databases": [
@@ -23,6 +30,12 @@
           "database_name": "opexio-db",
           "database_id": "63bdbe86-a44d-4160-9299-1426249e0512",
           "migrations_dir": "drizzle"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MY_BUCKET",
+          "bucket_name": "opexio-shipment-files"
         }
       ]
     }

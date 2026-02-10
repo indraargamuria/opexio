@@ -53,3 +53,24 @@ export const customers = sqliteTable("customers", {
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull()
 });
+
+export const shipmentHeader = sqliteTable("shipmentHeader", {
+    id: text("id").primaryKey(),
+    shipmentNumber: text("shipmentNumber").notNull().unique(),
+    customerId: text("customerId").notNull().references(() => customers.id),
+    r2FileKey: text("r2FileKey"),
+    status: text("status").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
+});
+
+export const shipmentDetail = sqliteTable("shipmentDetail", {
+    id: text("id").primaryKey(),
+    shipmentHeaderId: text("shipmentHeaderId").notNull().references(() => shipmentHeader.id),
+    itemCode: text("itemCode").notNull(),
+    itemDescription: text("itemDescription"),
+    quantity: integer("quantity").notNull(),
+    status: text("status").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
+});
