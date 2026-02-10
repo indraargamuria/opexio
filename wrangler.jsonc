@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "opexio",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-02-10",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "opexio-db",
+      "database_id": "b096e92a-1cf2-4525-80f5-fe79eb4a7f46",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
