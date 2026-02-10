@@ -45,3 +45,11 @@ export const verification = sqliteTable("verification", {
     createdAt: integer("createdAt", { mode: "timestamp" }),
     updatedAt: integer("updatedAt", { mode: "timestamp" })
 });
+
+export const customers = sqliteTable("customers", {
+    id: text("id").primaryKey(),
+    customerId: text("customerId").notNull().unique(),
+    name: text("name").notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull()
+});

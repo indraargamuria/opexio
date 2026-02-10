@@ -4,15 +4,18 @@
     "scripts": {
         "dev": "wrangler dev",
         "deploy": "wrangler deploy --minify --env production",
-        "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+        "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+        "db:generate": "drizzle-kit generate"
     },
     "dependencies": {
         "@types/bcryptjs": "^2.4.6",
+        "@types/uuid": "^10.0.0",
         "bcryptjs": "^3.0.3",
         "better-auth": "^1.4.18",
         "drizzle-kit": "^0.31.9",
         "drizzle-orm": "^0.45.1",
-        "hono": "^4.11.9"
+        "hono": "^4.11.9",
+        "uuid": "^13.0.0"
     },
     "devDependencies": {
         "wrangler": "^4.4.0"

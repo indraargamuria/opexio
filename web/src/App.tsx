@@ -43,6 +43,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import DashboardLayout from "./layouts/DashboardLayout";
+import CustomersPage from "./pages/CustomersPage";
+import ShipmentsPage from "./pages/ShipmentsPage";
+import InvoicesPage from "./pages/InvoicesPage";
+
 function AppRoutes() {
   return (
     <BrowserRouter>
@@ -68,10 +73,15 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <DashboardLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<DashboardPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="shipments" element={<ShipmentsPage />} />
+          <Route path="invoices" element={<InvoicesPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

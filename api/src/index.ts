@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
 
+import customers from "./routes/customers";
+
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // CORS middleware for frontend
@@ -19,6 +21,8 @@ app.use("/*", cors({
 app.on(["POST", "GET"], "/api/auth/**", (c) => {
   return auth(c.env, c.req.raw).handler(c.req.raw);
 });
+
+app.route("/api/customers", customers);
 
 app.get("/", (c) => {
   return c.text("Hello Hono with Better Auth!");
