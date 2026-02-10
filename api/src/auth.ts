@@ -24,7 +24,7 @@ export const auth = (env: any, request?: Request) => {
         baseURL: env.BETTER_AUTH_URL,
         trustedOrigins,
         advanced: {
-            cookieOptions: {
+            defaultCookieAttributes: {
                 sameSite: "none",
                 secure: true,
             },
