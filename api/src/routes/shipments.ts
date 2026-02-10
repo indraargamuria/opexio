@@ -112,25 +112,58 @@ app.post("/", async (c) => {
     }
 });
 
-// PUT update shipment header
+// PUT update shipment header and details
 app.put("/:id", async (c) => {
     const db = dbStart(c.env.DB);
     const id = c.req.param("id");
     const body = await c.req.json();
     const now = new Date();
 
-    const result = await db
-        .update(shipmentHeader)
-        .set({ ...body, updatedAt: now })
-        .where(eq(shipmentHeader.id, id))
-        .returning()
-        .get();
+    try {
+        // Update header - only update status field
+        const updatedHeader = await db
+            .update(shipmentHeader)
+            .set({
+                status: body.status,
+                updatedAt: now,
+            })
+            .where(eq(shipmentHeader.id, id))
+            .returning()
+            .get();
 
-    if (!result) {
-        return c.json({ error: "Shipment not found" }, 404);
+        if (!updatedHeader) {
+            return c.json({ error: "Shipment not found" }, 404);
+        }
+
+        // If details are provided, update them
+        if (body.details && Array.isArray(body.details)) {
+            // Delete existing details
+            await db.delete(shipmentDetail).where(eq(shipmentDetail.shipmentHeaderId, id)).run();
+
+            // Insert new details
+            if (body.details.length > 0) {
+                const newDetails = body.details.map((detail: any) => ({
+                    id: crypto.randomUUID(),
+                    shipmentHeaderId: id,
+                    itemCode: detail.itemCode,
+                    itemDescription: detail.itemDescription,
+                    quantity: detail.quantity,
+                    status: "pending", // Detail status always pending
+                    createdAt: now,
+                    updatedAt: now,
+                }));
+
+                await db.batch(
+                    newDetails.map((detail: any) => db.insert(shipmentDetail).values(detail))
+                );
+            }
+        }
+
+        return c.json(updatedHeader);
+    } catch (error) {
+        console.error("Error updating shipment:", error);
+        return c.json({ error: "Failed to update shipment" }, 500);
     }
-
-    return c.json(result);
 });
 
 // DELETE shipment and associated file

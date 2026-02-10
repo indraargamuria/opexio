@@ -372,6 +372,10 @@ export default function ShipmentsPage() {
         return customer ? customer.name : customerId;
     };
 
+    const capitalizeFirst = (str: string) => {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
     const getFileIcon = (r2FileKey: string | null) => {
         if (!r2FileKey) return null;
 
@@ -439,19 +443,12 @@ export default function ShipmentsPage() {
                                 <Label htmlFor="status" className="text-right">
                                     Status
                                 </Label>
-                                <Select
-                                    value={formData.status}
-                                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                                >
-                                    <SelectTrigger className="col-span-3">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="processing">Processing</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Input
+                                    id="status"
+                                    value="Pending"
+                                    disabled
+                                    className="col-span-3 bg-muted"
+                                />
                             </div>
 
                             {/* File Upload Section - Separate Row */}
@@ -524,13 +521,16 @@ export default function ShipmentsPage() {
                                     </Button>
                                 </div>
                                 {detailItems.map((detail, index) => (
-                                    <div key={index} className="border rounded-lg p-4 mb-3 relative">
+                                    <div key={index} className="border rounded-lg p-4 mb-3 relative pl-12">
+                                        <div className="absolute -top-3 -left-3 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold shadow-md">
+                                            {index + 1}
+                                        </div>
                                         {detailItems.length > 1 && (
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                className="absolute top-2 right-2 text-red-500"
+                                                className="absolute top-1 right-1 text-red-500 h-8 w-8"
                                                 onClick={() => removeDetailItem(index)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -566,22 +566,6 @@ export default function ShipmentsPage() {
                                                     onChange={(e) => handleDetailChange(index, "itemDescription", e.target.value)}
                                                     placeholder="Item description"
                                                 />
-                                            </div>
-                                            <div>
-                                                <Label htmlFor={`detailStatus-${index}`}>Status</Label>
-                                                <Select
-                                                    value={detail.status}
-                                                    onValueChange={(value) => handleDetailChange(index, "status", value)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="pending">Pending</SelectItem>
-                                                        <SelectItem value="processing">Processing</SelectItem>
-                                                        <SelectItem value="completed">Completed</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
                                             </div>
                                         </div>
                                     </div>
@@ -625,11 +609,9 @@ export default function ShipmentsPage() {
                                     <TableCell className="font-medium">{shipment.shipmentNumber}</TableCell>
                                     <TableCell>{getCustomerName(shipment.customerId)}</TableCell>
                                     <TableCell>
-                                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${shipment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                                            shipment.status === 'processing' ? 'bg-blue-50 text-blue-700' :
-                                                'bg-yellow-50 text-yellow-700'
+                                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${shipment.status === 'delivered' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
                                             }`}>
-                                            {shipment.status}
+                                            {capitalizeFirst(shipment.status)}
                                         </span>
                                     </TableCell>
                                     <TableCell>
@@ -718,13 +700,16 @@ export default function ShipmentsPage() {
                                 </Button>
                             </div>
                             {detailItems.map((detail, index) => (
-                                <div key={index} className="border rounded-lg p-4 mb-3 relative">
+                                <div key={index} className="border rounded-lg p-4 mb-3 relative pl-12">
+                                    <div className="absolute -top-3 -left-3 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold shadow-md">
+                                        {index + 1}
+                                    </div>
                                     {detailItems.length > 1 && (
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="absolute top-2 right-2 text-red-500"
+                                            className="absolute top-1 right-1 text-red-500 h-8 w-8"
                                             onClick={() => removeDetailItem(index)}
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -760,22 +745,6 @@ export default function ShipmentsPage() {
                                                 onChange={(e) => handleDetailChange(index, "itemDescription", e.target.value)}
                                                 placeholder="Item description"
                                             />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor={`edit-detailStatus-${index}`}>Status</Label>
-                                            <Select
-                                                value={detail.status}
-                                                onValueChange={(value) => handleDetailChange(index, "status", value)}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="pending">Pending</SelectItem>
-                                                    <SelectItem value="processing">Processing</SelectItem>
-                                                    <SelectItem value="completed">Completed</SelectItem>
-                                                </SelectContent>
-                                            </Select>
                                         </div>
                                     </div>
                                 </div>
