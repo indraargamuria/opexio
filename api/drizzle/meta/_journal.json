@@ -22,6 +22,20 @@
       "when": 1770723752318,
       "tag": "0002_gorgeous_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1770739318037,
+      "tag": "0003_big_speedball",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1770740118092,
+      "tag": "0004_skinny_sphinx",
+      "breakpoints": true
     }
   ]
 }

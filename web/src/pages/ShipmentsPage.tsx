@@ -45,6 +45,8 @@ interface Shipment {
     customerId: string;
     r2FileKey: string | null;
     status: string;
+    createdBy?: string | null;
+    createdByName?: string | null;
     createdAt: string;
     updatedAt: string;
     details?: ShipmentDetail[];
@@ -71,7 +73,9 @@ export default function ShipmentsPage() {
     const [formData, setFormData] = useState({
         shipmentNumber: "",
         customerId: "",
-        status: "pending",
+        r2FileKey: null,
+        status: "On Going",
+        createdBy: "",
     });
 
     const [detailItems, setDetailItems] = useState<Array<{
@@ -206,7 +210,7 @@ export default function ShipmentsPage() {
                 const result = await res.json();
                 console.log("Shipment created successfully:", result);
                 setIsDialogOpen(false);
-                setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+                setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
                 setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
                 setSelectedFile(null);
                 setFilePreview(null);
@@ -257,7 +261,7 @@ export default function ShipmentsPage() {
             if (headerRes.ok) {
                 setIsEditDialogOpen(false);
                 setCurrentShipment(null);
-                setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+                setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
                 setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
                 fetchShipments();
             } else {
@@ -340,6 +344,8 @@ export default function ShipmentsPage() {
                     shipmentNumber: shipment.shipmentNumber,
                     customerId: shipment.customerId,
                     status: shipment.status,
+                    createdBy: shipment.createdBy || "",
+                    r2FileKey: shipment.r2FileKey
                 });
 
                 // Load detail items for editing
@@ -362,7 +368,7 @@ export default function ShipmentsPage() {
     };
 
     const resetCreateDialog = () => {
-        setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+        setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
         setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
         setSelectedFile(null);
         setFilePreview(null);
@@ -370,7 +376,7 @@ export default function ShipmentsPage() {
 
     const resetEditDialog = () => {
         setCurrentShipment(null);
-        setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+        setFormData({ shipmentNumber: "", customerId: "", status: "On Going", createdBy: "", r2FileKey: null });
         setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
     };
 
@@ -393,8 +399,25 @@ export default function ShipmentsPage() {
         return customer ? customer.name : customerId;
     };
 
-    const capitalizeFirst = (str: string) => {
-        return str.charAt(0).toUpperCase() + str.slice(1);
+    const formatStatus = (status: string) => {
+        if (!status) return "";
+        // Handle specific cases if needed, or just capitalize
+        if (status.toLowerCase() === 'on going') return 'On Going';
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    };
+
+    const getStatusColor = (status: string) => {
+        const lowerStatus = status.toLowerCase();
+        if (lowerStatus === 'delivered' || lowerStatus === 'completed') {
+            return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+        }
+        if (lowerStatus === 'on going' || lowerStatus === 'processing') {
+            return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+        }
+        if (lowerStatus === 'pending') {
+            return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+        }
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
     };
 
     const getFileIcon = (r2FileKey: string | null) => {
@@ -466,7 +489,7 @@ export default function ShipmentsPage() {
                                 </Label>
                                 <Input
                                     id="status"
-                                    value="Pending"
+                                    value="On Going"
                                     disabled
                                     className="col-span-3 bg-muted"
                                 />
@@ -606,37 +629,38 @@ export default function ShipmentsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Shipment #</TableHead>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>File</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="w-[15%]">Shipment #</TableHead>
+                            <TableHead className="w-[30%]">Customer</TableHead>
+                            <TableHead className="w-[15%]">Status</TableHead>
+                            <TableHead className="w-[20%]">Created By</TableHead>
+                            <TableHead className="w-[10%]">File</TableHead>
+                            <TableHead className="w-[10%] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center h-24">
+                                <TableCell colSpan={6} className="text-center h-24">
                                     Loading...
                                 </TableCell>
                             </TableRow>
                         ) : shipments.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center h-24">
+                                <TableCell colSpan={6} className="text-center h-24">
                                     No shipments found.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             shipments.map((shipment) => (
                                 <TableRow key={shipment.id}>
-                                    <TableCell className="font-medium">{shipment.shipmentNumber}</TableCell>
+                                    <TableCell>{shipment.shipmentNumber}</TableCell>
                                     <TableCell>{getCustomerName(shipment.customerId)}</TableCell>
                                     <TableCell>
-                                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${shipment.status === 'delivered' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-                                            }`}>
-                                            {capitalizeFirst(shipment.status)}
+                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(shipment.status)}`}>
+                                            {formatStatus(shipment.status)}
                                         </span>
                                     </TableCell>
+                                    <TableCell>{shipment.createdByName || shipment.createdBy || "-"}</TableCell>
                                     <TableCell>
                                         {shipment.r2FileKey ? (
                                             <button
@@ -692,8 +716,28 @@ export default function ShipmentsPage() {
                                 id="edit-shipmentNumber"
                                 value={formData.shipmentNumber}
                                 disabled
-                                className="col-span-3"
+                                className="col-span-3 bg-muted"
                             />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-customerId" className="text-right">
+                                Customer
+                            </Label>
+                            <Select
+                                value={formData.customerId}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, customerId: value }))}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select customer" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {customers.map((customer) => (
+                                        <SelectItem key={customer.id} value={customer.id}>
+                                            {customer.name} ({customer.customerId})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="edit-status" className="text-right">
@@ -707,9 +751,8 @@ export default function ShipmentsPage() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                    <SelectItem value="processing">Processing</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="On Going">On Going</SelectItem>
+                                    <SelectItem value="Delivered">Delivered</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -800,7 +843,7 @@ export default function ShipmentsPage() {
                                     {currentShipment.r2FileKey.toLowerCase().endsWith('.pdf') && (
                                         <div className="mt-3">
                                             <iframe
-                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file`}
+                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file#toolbar=0&navpanes=0&scrollbar=0`}
                                                 className="w-full h-96 rounded border"
                                                 title="PDF Preview"
                                             />

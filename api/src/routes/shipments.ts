@@ -1,16 +1,31 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { dbStart } from "../db";
-import { shipmentHeader, shipmentDetail } from "../db/schema";
+import { shipmentHeader, shipmentDetail, user } from "../db/schema";
 import { v4 as uuidv4 } from "uuid";
 import { createShipmentSchema } from "./shipments/validation";
+import { auth } from "../auth";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // GET all shipments
 app.get("/", async (c) => {
     const db = dbStart(c.env.DB);
-    const result = await db.select().from(shipmentHeader).all();
+    const result = await db
+        .select({
+            id: shipmentHeader.id,
+            shipmentNumber: shipmentHeader.shipmentNumber,
+            customerId: shipmentHeader.customerId,
+            r2FileKey: shipmentHeader.r2FileKey,
+            status: shipmentHeader.status,
+            createdBy: shipmentHeader.createdBy,
+            createdAt: shipmentHeader.createdAt,
+            updatedAt: shipmentHeader.updatedAt,
+            createdByName: user.name
+        })
+        .from(shipmentHeader)
+        .leftJoin(user, eq(shipmentHeader.createdBy, user.id))
+        .all();
     return c.json(result);
 });
 
@@ -20,8 +35,19 @@ app.get("/:id", async (c) => {
     const id = c.req.param("id");
 
     const header = await db
-        .select()
+        .select({
+            id: shipmentHeader.id,
+            shipmentNumber: shipmentHeader.shipmentNumber,
+            customerId: shipmentHeader.customerId,
+            r2FileKey: shipmentHeader.r2FileKey,
+            status: shipmentHeader.status,
+            createdBy: shipmentHeader.createdBy,
+            createdAt: shipmentHeader.createdAt,
+            updatedAt: shipmentHeader.updatedAt,
+            createdByName: user.name
+        })
         .from(shipmentHeader)
+        .leftJoin(user, eq(shipmentHeader.createdBy, user.id))
         .where(eq(shipmentHeader.id, id))
         .get();
 
@@ -40,6 +66,14 @@ app.get("/:id", async (c) => {
 
 // POST create new shipment with file upload
 app.post("/", async (c) => {
+    const session = await auth(c.env, c.req.raw).api.getSession({
+        headers: c.req.raw.headers,
+    });
+
+    if (!session) {
+        return c.json({ error: "Unauthorized" }, 401);
+    }
+
     let fileKey: string | null = null;
 
     try {
@@ -92,6 +126,7 @@ app.post("/", async (c) => {
             customerId: header.customerId,
             r2FileKey: fileKey,
             status: header.status,
+            createdBy: session.user.id,
             createdAt: now,
             updatedAt: now
         };

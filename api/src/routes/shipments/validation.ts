@@ -10,7 +10,8 @@ export const createShipmentDetailSchema = z.object({
 export const createShipmentHeaderSchema = z.object({
     shipmentNumber: z.string().min(1, "Shipment number is required"),
     customerId: z.string().min(1, "Customer ID is required"),
-    status: z.string().min(1, "Status is required")
+    status: z.string().min(1, "Status is required"),
+    createdBy: z.string().optional()
 });
 
 export const createShipmentSchema = z.object({

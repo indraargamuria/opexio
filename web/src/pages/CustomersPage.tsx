@@ -25,6 +25,9 @@ interface Customer {
     id: string;
     customerId: string;
     name: string;
+    emailAddress?: string | null;
+    createdBy?: string | null;
+    createdByName?: string | null;
     updatedAt: string;
     createdAt: string;
 }
@@ -42,6 +45,8 @@ export default function CustomersPage() {
     const [formData, setFormData] = useState({
         customerId: "",
         name: "",
+        emailAddress: "",
+        createdBy: "",
     });
 
     const fetchCustomers = async () => {
@@ -85,7 +90,7 @@ export default function CustomersPage() {
 
             if (res.ok) {
                 setIsDialogOpen(false);
-                setFormData({ customerId: "", name: "" });
+                setFormData({ customerId: "", name: "", emailAddress: "", createdBy: "" });
                 fetchCustomers();
             } else {
                 console.error("Failed to create customer");
@@ -111,7 +116,7 @@ export default function CustomersPage() {
             if (res.ok) {
                 setIsEditDialogOpen(false);
                 setCurrentCustomer(null);
-                setFormData({ customerId: "", name: "" });
+                setFormData({ customerId: "", name: "", emailAddress: "", createdBy: "" });
                 fetchCustomers();
             } else {
                 console.error("Failed to update customer");
@@ -145,6 +150,8 @@ export default function CustomersPage() {
         setFormData({
             customerId: customer.customerId,
             name: customer.name,
+            emailAddress: customer.emailAddress || "",
+            createdBy: customer.createdByName || customer.createdBy || "",
         });
         setIsEditDialogOpen(true);
     };
@@ -191,6 +198,20 @@ export default function CustomersPage() {
                                     className="col-span-3"
                                 />
                             </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="emailAddress" className="text-right">
+                                    Email
+                                </Label>
+                                <Input
+                                    id="emailAddress"
+                                    name="emailAddress"
+                                    type="email"
+                                    value={formData.emailAddress}
+                                    onChange={handleInputChange}
+                                    className="col-span-3"
+                                    placeholder="example@domain.com"
+                                />
+                            </div>
                         </div>
                         <DialogFooter>
                             <Button onClick={handleCreate}>Save</Button>
@@ -203,31 +224,33 @@ export default function CustomersPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>System ID</TableHead>
                             <TableHead>Customer ID</TableHead>
                             <TableHead>Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Created By</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center h-24">
+                                <TableCell colSpan={5} className="text-center h-24">
                                     Loading...
                                 </TableCell>
                             </TableRow>
                         ) : customers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center h-24">
+                                <TableCell colSpan={5} className="text-center h-24">
                                     No customers found.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             customers.map((customer) => (
                                 <TableRow key={customer.id}>
-                                    <TableCell className="font-mono text-xs">{customer.id}</TableCell>
                                     <TableCell>{customer.customerId}</TableCell>
                                     <TableCell>{customer.name}</TableCell>
+                                    <TableCell>{customer.emailAddress || "-"}</TableCell>
+                                    <TableCell>{customer.createdByName || customer.createdBy || "-"}</TableCell>
                                     <TableCell className="text-right">
                                         <Button
                                             variant="ghost"
@@ -283,6 +306,32 @@ export default function CustomersPage() {
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-emailAddress" className="text-right">
+                                Email
+                            </Label>
+                            <Input
+                                id="edit-emailAddress"
+                                name="emailAddress"
+                                type="email"
+                                value={formData.emailAddress}
+                                onChange={handleInputChange}
+                                className="col-span-3"
+                                placeholder="example@domain.com"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-createdBy" className="text-right">
+                                Created By
+                            </Label>
+                            <Input
+                                id="edit-createdBy"
+                                name="createdBy"
+                                value={formData.createdBy}
+                                disabled
+                                className="col-span-3 bg-muted"
                             />
                         </div>
                     </div>

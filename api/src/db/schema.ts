@@ -50,6 +50,8 @@ export const customers = sqliteTable("customers", {
     id: text("id").primaryKey(),
     customerId: text("customerId").notNull().unique(),
     name: text("name").notNull(),
+    emailAddress: text("emailAddress"),
+    createdBy: text("createdBy").references(() => user.id),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull()
 });
@@ -60,6 +62,7 @@ export const shipmentHeader = sqliteTable("shipmentHeader", {
     customerId: text("customerId").notNull().references(() => customers.id),
     r2FileKey: text("r2FileKey"),
     status: text("status").notNull(),
+    createdBy: text("createdBy").references(() => user.id),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
 });
