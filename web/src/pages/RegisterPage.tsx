@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { signUp } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ export default function RegisterPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,7 +24,8 @@ export default function RegisterPage() {
                 email,
                 password,
             });
-            navigate("/dashboard");
+            // Use window.location to ensure session is reloaded
+            window.location.href = "/dashboard";
         } catch (err: any) {
             setError(err?.message || "Failed to create account");
             console.error(err);
