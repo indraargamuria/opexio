@@ -167,4 +167,45 @@ app.delete("/:id", async (c) => {
     return c.json(result);
 });
 
+// GET file download/preview
+app.get("/:id/file", async (c) => {
+    const db = dbStart(c.env.DB);
+    const id = c.req.param("id");
+    const download = c.req.query("download") === "true"; // Check if download is requested
+
+    const shipment = await db
+        .select()
+        .from(shipmentHeader)
+        .where(eq(shipmentHeader.id, id))
+        .get();
+
+    if (!shipment) {
+        return c.json({ error: "Shipment not found" }, 404);
+    }
+
+    if (!shipment.r2FileKey) {
+        return c.json({ error: "No file attached" }, 404);
+    }
+
+    // Get the file from R2
+    const object = await c.env.MY_BUCKET.get(shipment.r2FileKey);
+
+    if (!object) {
+        return c.json({ error: "File not found in storage" }, 404);
+    }
+
+    // Extract filename from R2 key
+    const filename = shipment.r2FileKey.split('/').pop() || 'download';
+
+    // Return the file with appropriate Content-Disposition
+    return new Response(object.body, {
+        headers: {
+            'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
+            'Content-Disposition': download
+                ? `attachment; filename="${filename}"`
+                : `inline; filename="${filename}"`,
+        },
+    });
+});
+
 export default app;

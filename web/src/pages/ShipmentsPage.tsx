@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Edit, Plus, FileText } from "lucide-react";
+import { Trash2, Edit, Plus, FileText, Download, X } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -81,6 +81,7 @@ export default function ShipmentsPage() {
     }>>([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | null>(null);
 
     const fetchShipments = async () => {
         setLoading(true);
@@ -127,8 +128,28 @@ export default function ShipmentsPage() {
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
-            setSelectedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setSelectedFile(file);
+
+            // Create preview URL for images and PDFs
+            const fileType = file.type;
+            if (fileType.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setFilePreview(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+            } else if (fileType === 'application/pdf') {
+                setFilePreview(URL.createObjectURL(file));
+            } else {
+                setFilePreview(null);
+            }
         }
+    };
+
+    const removeFile = () => {
+        setSelectedFile(null);
+        setFilePreview(null);
     };
 
     const handleDetailChange = (index: number, field: string, value: string) => {
@@ -177,6 +198,7 @@ export default function ShipmentsPage() {
                 setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
                 setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
                 setSelectedFile(null);
+                setFilePreview(null);
                 fetchShipments();
             } else {
                 const error = await res.json();
@@ -193,25 +215,37 @@ export default function ShipmentsPage() {
         if (!currentShipment) return;
 
         try {
-            const res = await fetch(`${API_URL}/api/shipments/${currentShipment.id}`, {
+            // Update header status
+            const headerRes = await fetch(`${API_URL}/api/shipments/${currentShipment.id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ status: formData.status }),
+                body: JSON.stringify({
+                    status: formData.status,
+                    details: detailItems.map(item => ({
+                        itemCode: item.itemCode,
+                        itemDescription: item.itemDescription || null,
+                        quantity: parseInt(item.quantity),
+                        status: item.status
+                    }))
+                }),
                 credentials: "include",
             });
 
-            if (res.ok) {
+            if (headerRes.ok) {
                 setIsEditDialogOpen(false);
                 setCurrentShipment(null);
                 setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+                setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
                 fetchShipments();
             } else {
                 console.error("Failed to update shipment");
+                alert("Failed to update shipment");
             }
         } catch (error) {
             console.error("Error updating shipment:", error);
+            alert("Error updating shipment");
         }
     };
 
@@ -234,14 +268,103 @@ export default function ShipmentsPage() {
         }
     };
 
-    const openEditDialog = (shipment: Shipment) => {
-        setCurrentShipment(shipment);
-        setFormData({
-            shipmentNumber: shipment.shipmentNumber,
-            customerId: shipment.customerId,
-            status: shipment.status,
-        });
-        setIsEditDialogOpen(true);
+    const handleDownload = async (shipmentId: string, shipmentNumber: string) => {
+        try {
+            const res = await fetch(`${API_URL}/api/shipments/${shipmentId}/file?download=true`, {
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                const blob = await res.blob();
+
+                // Extract filename from Content-Disposition header
+                const contentDisposition = res.headers.get('Content-Disposition');
+                let filename = `${shipmentNumber}-document`;
+
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/i);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                alert("Failed to download file");
+            }
+        } catch (error) {
+            console.error("Error downloading file:", error);
+            alert("Error downloading file");
+        }
+    };
+
+    const openEditDialog = async (shipmentId: string) => {
+        try {
+            // Fetch shipment with details
+            const res = await fetch(`${API_URL}/api/shipments/${shipmentId}`, {
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                const shipment = await res.json();
+                setCurrentShipment(shipment);
+                setFormData({
+                    shipmentNumber: shipment.shipmentNumber,
+                    customerId: shipment.customerId,
+                    status: shipment.status,
+                });
+
+                // Load detail items for editing
+                if (shipment.details && shipment.details.length > 0) {
+                    setDetailItems(shipment.details.map((detail: ShipmentDetail) => ({
+                        itemCode: detail.itemCode,
+                        itemDescription: detail.itemDescription || "",
+                        quantity: detail.quantity.toString(),
+                        status: detail.status,
+                    })));
+                } else {
+                    setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+                }
+
+                setIsEditDialogOpen(true);
+            }
+        } catch (error) {
+            console.error("Error fetching shipment details:", error);
+        }
+    };
+
+    const resetCreateDialog = () => {
+        setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+        setSelectedFile(null);
+        setFilePreview(null);
+    };
+
+    const resetEditDialog = () => {
+        setCurrentShipment(null);
+        setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
+        setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
+    };
+
+    const handleCreateDialogChange = (open: boolean) => {
+        setIsDialogOpen(open);
+        if (!open) {
+            resetCreateDialog();
+        }
+    };
+
+    const handleEditDialogChange = (open: boolean) => {
+        setIsEditDialogOpen(open);
+        if (!open) {
+            resetEditDialog();
+        }
     };
 
     const getCustomerName = (customerId: string) => {
@@ -249,11 +372,22 @@ export default function ShipmentsPage() {
         return customer ? customer.name : customerId;
     };
 
+    const getFileIcon = (r2FileKey: string | null) => {
+        if (!r2FileKey) return null;
+
+        const extension = r2FileKey.split('.').pop()?.toLowerCase();
+        if (extension === 'pdf') return '📄';
+        if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(extension || '')) return '🖼️';
+        if (['doc', 'docx'].includes(extension || '')) return '📝';
+        if (['xls', 'xlsx'].includes(extension || '')) return '📊';
+        return '📎';
+    };
+
     return (
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Shipments</h1>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isDialogOpen} onOpenChange={handleCreateDialogChange}>
                     <DialogTrigger asChild>
                         <Button>
                             <Plus className="mr-2 h-4 w-4" /> Create Shipment
@@ -319,16 +453,66 @@ export default function ShipmentsPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="file" className="text-right">
-                                    File
-                                </Label>
-                                <Input
-                                    id="file"
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    className="col-span-3"
-                                />
+
+                            {/* File Upload Section - Separate Row */}
+                            <div className="col-span-4 border-t pt-4 mt-2">
+                                <Label className="text-lg font-semibold mb-3 block">Attach Document</Label>
+                                {!selectedFile ? (
+                                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                                        <Input
+                                            id="file"
+                                            type="file"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                        <Label htmlFor="file" className="cursor-pointer">
+                                            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+                                            <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
+                                            <p className="text-xs text-muted-foreground mt-1">PDF, Images, Documents</p>
+                                        </Label>
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-lg p-4 bg-muted/30">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <FileText className="h-5 w-5 text-primary" />
+                                                <div>
+                                                    <p className="font-medium text-sm">{selectedFile.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {(selectedFile.size / 1024).toFixed(2)} KB
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={removeFile}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        {filePreview && selectedFile.type.startsWith('image/') && (
+                                            <div className="mt-2">
+                                                <img
+                                                    src={filePreview}
+                                                    alt="Preview"
+                                                    className="max-h-48 rounded border mx-auto"
+                                                />
+                                            </div>
+                                        )}
+                                        {filePreview && selectedFile.type === 'application/pdf' && (
+                                            <div className="mt-2">
+                                                <iframe
+                                                    src={filePreview}
+                                                    className="w-full h-48 rounded border"
+                                                    title="PDF Preview"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Detail Items */}
@@ -442,15 +626,22 @@ export default function ShipmentsPage() {
                                     <TableCell>{getCustomerName(shipment.customerId)}</TableCell>
                                     <TableCell>
                                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${shipment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                                                shipment.status === 'processing' ? 'bg-blue-50 text-blue-700' :
-                                                    'bg-yellow-50 text-yellow-700'
+                                            shipment.status === 'processing' ? 'bg-blue-50 text-blue-700' :
+                                                'bg-yellow-50 text-yellow-700'
                                             }`}>
                                             {shipment.status}
                                         </span>
                                     </TableCell>
                                     <TableCell>
                                         {shipment.r2FileKey ? (
-                                            <FileText className="h-4 w-4 text-muted-foreground" />
+                                            <button
+                                                onClick={() => handleDownload(shipment.id, shipment.shipmentNumber)}
+                                                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
+                                                title="Download file"
+                                            >
+                                                <span className="text-lg">{getFileIcon(shipment.r2FileKey)}</span>
+                                                <Download className="h-3 w-3" />
+                                            </button>
                                         ) : (
                                             <span className="text-muted-foreground text-sm">No file</span>
                                         )}
@@ -459,7 +650,7 @@ export default function ShipmentsPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => openEditDialog(shipment)}
+                                            onClick={() => openEditDialog(shipment.id)}
                                         >
                                             <Edit className="h-4 w-4" />
                                         </Button>
@@ -479,12 +670,12 @@ export default function ShipmentsPage() {
                 </Table>
             </div>
 
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent>
+            <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogChange}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Edit Shipment</DialogTitle>
                         <DialogDescription>
-                            Update shipment status.
+                            Update shipment status and view attached document.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -517,6 +708,124 @@ export default function ShipmentsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {/* Detail Items Section */}
+                        <div className="col-span-4 border-t pt-4 mt-2">
+                            <div className="flex justify-between items-center mb-4">
+                                <Label className="text-lg font-semibold">Detail Items</Label>
+                                <Button type="button" size="sm" onClick={addDetailItem}>
+                                    <Plus className="mr-2 h-4 w-4" /> Add Item
+                                </Button>
+                            </div>
+                            {detailItems.map((detail, index) => (
+                                <div key={index} className="border rounded-lg p-4 mb-3 relative">
+                                    {detailItems.length > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-2 right-2 text-red-500"
+                                            onClick={() => removeDetailItem(index)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    <div className="grid gap-3">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label htmlFor={`edit-itemCode-${index}`}>Item Code</Label>
+                                                <Input
+                                                    id={`edit-itemCode-${index}`}
+                                                    value={detail.itemCode}
+                                                    onChange={(e) => handleDetailChange(index, "itemCode", e.target.value)}
+                                                    placeholder="e.g., ITEM-001"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label htmlFor={`edit-quantity-${index}`}>Quantity</Label>
+                                                <Input
+                                                    id={`edit-quantity-${index}`}
+                                                    type="number"
+                                                    value={detail.quantity}
+                                                    onChange={(e) => handleDetailChange(index, "quantity", e.target.value)}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor={`edit-itemDescription-${index}`}>Description</Label>
+                                            <Input
+                                                id={`edit-itemDescription-${index}`}
+                                                value={detail.itemDescription}
+                                                onChange={(e) => handleDetailChange(index, "itemDescription", e.target.value)}
+                                                placeholder="Item description"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor={`edit-detailStatus-${index}`}>Status</Label>
+                                            <Select
+                                                value={detail.status}
+                                                onValueChange={(value) => handleDetailChange(index, "status", value)}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="pending">Pending</SelectItem>
+                                                    <SelectItem value="processing">Processing</SelectItem>
+                                                    <SelectItem value="completed">Completed</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* File Preview in Edit Dialog */}
+                        {currentShipment?.r2FileKey && (
+                            <div className="col-span-4 border-t pt-4 mt-2">
+                                <Label className="text-sm font-semibold mb-2 block">Attached Document</Label>
+                                <div className="border rounded-lg p-4 bg-muted/30">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl">{getFileIcon(currentShipment.r2FileKey)}</span>
+                                            <div>
+                                                <p className="font-medium text-sm">{currentShipment.r2FileKey.split('/').pop()}</p>
+                                                <p className="text-xs text-muted-foreground">Document preview below</p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDownload(currentShipment.id, currentShipment.shipmentNumber)}
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Download
+                                        </Button>
+                                    </div>
+                                    {currentShipment.r2FileKey.toLowerCase().endsWith('.pdf') && (
+                                        <div className="mt-3">
+                                            <iframe
+                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file`}
+                                                className="w-full h-96 rounded border"
+                                                title="PDF Preview"
+                                            />
+                                        </div>
+                                    )}
+                                    {['png', 'jpg', 'jpeg', 'gif', 'webp'].some(ext => currentShipment.r2FileKey?.toLowerCase().endsWith(`.${ext}`)) && (
+                                        <div className="mt-3">
+                                            <img
+                                                src={`${API_URL}/api/shipments/${currentShipment.id}/file`}
+                                                alt="Document preview"
+                                                className="max-h-96 rounded border mx-auto"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button onClick={handleUpdate}>Update</Button>
