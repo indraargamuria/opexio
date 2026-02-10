@@ -12,7 +12,7 @@ export const auth = (env: any) =>
         },
         secret: env.BETTER_AUTH_SECRET,
         baseURL: env.BETTER_AUTH_URL,
-        trustedOrigins: ["http://localhost:5173", "https://opexio-web.pages.dev", "https://ff242aaa.opexio-web.pages.dev"],
+        trustedOrigins: ["http://localhost:5173", "https://*.opexio-web.pages.dev", "https://opexio-web.pages.dev"],
         advanced: {
             cookieOptions: {
                 sameSite: "none",
