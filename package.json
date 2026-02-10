@@ -1,18 +1,21 @@
 {
   "name": "opexio",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web"
+  ],
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --minify --env production",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
-  },
-  "dependencies": {
-    "better-auth": "^1.4.18",
-    "drizzle-kit": "^0.31.9",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.11.9"
+    "dev:api": "npm run dev --workspace=api",
+    "dev:web": "npm run dev --workspace=web",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "build:api": "npm run deploy --workspace=api",
+    "build:web": "npm run build --workspace=web",
+    "deploy": "npm run build:api && npm run deploy:web",
+    "deploy:web": "wrangler pages deploy web/dist --project-name=opexio-web"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "wrangler": "^4.4.0"
   }
 }
