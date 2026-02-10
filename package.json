@@ -11,7 +11,7 @@
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "build:api": "npm run deploy --workspace=api",
     "build:web": "npm run build --workspace=web",
-    "deploy": "npm run build:api && npm run deploy:web",
+    "deploy": "npm run build:api && npm run build:web && npm run deploy:web",
     "deploy:web": "wrangler pages deploy web/dist --project-name=opexio-web"
   },
   "devDependencies": {
