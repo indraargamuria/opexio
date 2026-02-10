@@ -40,6 +40,8 @@ app.get("/:id", async (c) => {
 
 // POST create new shipment with file upload
 app.post("/", async (c) => {
+    let fileKey: string | null = null;
+
     try {
         const db = dbStart(c.env.DB);
         const formData = await c.req.parseBody();
@@ -67,14 +69,21 @@ app.post("/", async (c) => {
         const now = new Date();
         const headerId = uuidv4();
 
-        // Upload file to R2
-        const fileKey = `shipments/${header.shipmentNumber}/${file.name}`;
-        const arrayBuffer = await file.arrayBuffer();
-        await c.env.MY_BUCKET.put(fileKey, arrayBuffer, {
-            httpMetadata: {
-                contentType: file.type
-            }
-        });
+        // Upload file to R2 with error handling
+        console.log(`Uploading file for shipment ${header.shipmentNumber}...`);
+        try {
+            fileKey = `shipments/${header.shipmentNumber}/${file.name}`;
+            const arrayBuffer = await file.arrayBuffer();
+            await c.env.MY_BUCKET.put(fileKey, arrayBuffer, {
+                httpMetadata: {
+                    contentType: file.type
+                }
+            });
+            console.log(`File uploaded successfully: ${fileKey}`);
+        } catch (error) {
+            console.error("R2 upload failed:", error);
+            return c.json({ error: "Failed to upload file to storage" }, 500);
+        }
 
         // Prepare database records
         const newHeader = {
@@ -98,17 +107,42 @@ app.post("/", async (c) => {
             updatedAt: now
         }));
 
-        // Atomic insert using batch
-        await db.batch([
-            db.insert(shipmentHeader).values(newHeader),
-            ...newDetails.map(detail => db.insert(shipmentDetail).values(detail))
-        ]);
+        // Atomic insert using batch with error handling
+        console.log(`Inserting shipment ${headerId} to database...`);
+        try {
+            await db.batch([
+                db.insert(shipmentHeader).values(newHeader),
+                ...newDetails.map(detail => db.insert(shipmentDetail).values(detail))
+            ]);
+            console.log(`Successfully created shipment ${headerId} with ${newDetails.length} detail(s)`);
+        } catch (error) {
+            console.error("Database insert failed:", error);
+
+            // Try to clean up R2 file since database failed
+            if (fileKey) {
+                try {
+                    console.log(`Cleaning up R2 file: ${fileKey}`);
+                    await c.env.MY_BUCKET.delete(fileKey);
+                    console.log("R2 file cleanup successful");
+                } catch (cleanupError) {
+                    console.error("Failed to cleanup R2 file:", cleanupError);
+                }
+            }
+
+            return c.json({
+                error: "Failed to save shipment to database",
+                details: error instanceof Error ? error.message : "Unknown error"
+            }, 500);
+        }
 
         // Return created shipment
         return c.json({ ...newHeader, details: newDetails }, 201);
     } catch (error) {
-        console.error("Error creating shipment:", error);
-        return c.json({ error: "Failed to create shipment" }, 500);
+        console.error("Unexpected error creating shipment:", error);
+        return c.json({
+            error: "Failed to create shipment",
+            details: error instanceof Error ? error.message : "Unknown error"
+        }, 500);
     }
 });
 

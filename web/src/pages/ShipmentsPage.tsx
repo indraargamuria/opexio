@@ -62,6 +62,7 @@ export default function ShipmentsPage() {
     const [shipments, setShipments] = useState<Shipment[]>([]);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isCreating, setIsCreating] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [currentShipment, setCurrentShipment] = useState<Shipment | null>(null);
@@ -174,6 +175,7 @@ export default function ShipmentsPage() {
             return;
         }
 
+        setIsCreating(true);
         try {
             const formDataToSend = new FormData();
             formDataToSend.append("file", selectedFile);
@@ -187,27 +189,46 @@ export default function ShipmentsPage() {
             }));
             formDataToSend.append("details", JSON.stringify(detailsForSubmit));
 
+            // Add timeout wrapper (30 seconds for large file uploads)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
             const res = await fetch(`${API_URL}/api/shipments`, {
                 method: "POST",
                 body: formDataToSend,
                 credentials: "include",
+                signal: controller.signal
             });
 
+            clearTimeout(timeoutId);
+
             if (res.ok) {
+                const result = await res.json();
+                console.log("Shipment created successfully:", result);
                 setIsDialogOpen(false);
                 setFormData({ shipmentNumber: "", customerId: "", status: "pending" });
                 setDetailItems([{ itemCode: "", itemDescription: "", quantity: "", status: "pending" }]);
                 setSelectedFile(null);
                 setFilePreview(null);
-                fetchShipments();
+                await fetchShipments();
             } else {
                 const error = await res.json();
                 console.error("Failed to create shipment:", error);
-                alert(`Failed to create shipment: ${error.error || "Unknown error"}`);
+                alert(`Failed to create shipment: ${error.error || "Unknown error"}\n\nPlease refresh the page to check if the shipment was created.`);
+                // Still refresh to check if data was saved
+                await fetchShipments();
             }
         } catch (error) {
             console.error("Error creating shipment:", error);
-            alert("Error creating shipment");
+            if (error instanceof Error && error.name === 'AbortError') {
+                alert("Request timed out. The shipment may still have been created.\n\nPlease refresh to check.");
+            } else {
+                alert("Error creating shipment: " + (error instanceof Error ? error.message : "Unknown error"));
+            }
+            // Refresh to see if shipment was actually created
+            await fetchShipments();
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -573,7 +594,9 @@ export default function ShipmentsPage() {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button onClick={handleCreate}>Create Shipment</Button>
+                            <Button onClick={handleCreate} disabled={isCreating}>
+                                {isCreating ? "Creating..." : "Create Shipment"}
+                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
