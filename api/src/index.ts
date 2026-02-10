@@ -6,7 +6,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 // CORS middleware for frontend
 app.use("/*", cors({
-  origin: ["http://localhost:5173", "https://opexio-web.pages.dev"],
+  origin: ["http://localhost:5173", "https://opexio-web.pages.dev", "https://ff242aaa.opexio-web.pages.dev"],
   credentials: true,
 }));
 
