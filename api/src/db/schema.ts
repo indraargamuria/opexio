@@ -82,3 +82,20 @@ export const shipmentDetail = sqliteTable("shipmentDetail", {
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
 });
+
+export const invoices = sqliteTable("invoices", {
+    id: text("id").primaryKey(),
+    invoiceNumber: text("invoiceNumber").notNull().unique(),
+    customerId: text("customerId").notNull().references(() => customers.id),
+    shipmentId: text("shipmentId").references(() => shipmentHeader.id),
+    amount: text("amount").notNull(),
+    status: text("status").notNull().default("Draft"),
+    documentPath: text("documentPath"),
+    entryType: text("entryType").notNull(),
+    issueDate: integer("issueDate", { mode: "timestamp" }).notNull(),
+    dueDate: integer("dueDate", { mode: "timestamp" }).notNull(),
+    deletedAt: integer("deletedAt", { mode: "timestamp" }),
+    createdBy: text("createdBy").references(() => user.id),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull()
+});

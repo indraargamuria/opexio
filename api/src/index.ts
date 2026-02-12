@@ -5,6 +5,7 @@ import { auth } from "./auth";
 import customers from "./routes/customers";
 import publicRoutes from "./routes/public";
 import shipments from "./routes/shipments";
+import invoices from "./routes/invoices";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -28,6 +29,7 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => {
 app.route("/public", publicRoutes);
 app.route("/api/customers", customers);
 app.route("/api/shipments", shipments);
+app.route("/api/invoices", invoices);
 
 app.get("/", (c) => {
   return c.text("Hello Hono with Better Auth!");

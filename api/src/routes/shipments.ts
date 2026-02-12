@@ -353,6 +353,9 @@ app.get("/:id/file", async (c) => {
         return c.json({ error: "File not found in storage" }, 404);
     }
 
+    // Read the file into buffer (ReadableStream can only be consumed once)
+    const buffer = await object.arrayBuffer();
+
     // Extract filename from R2 key or shipment number
     let filename = fileKey.split('/').pop() || 'download';
 
@@ -361,7 +364,7 @@ app.get("/:id/file", async (c) => {
     filename = `${shipment.shipmentNumber}${filenameSuffix}.${ext}`;
 
     // Return the file with appropriate Content-Disposition
-    return new Response(object.body, {
+    return new Response(buffer, {
         headers: {
             'Content-Type': object.httpMetadata?.contentType || 'application/octet-stream',
             'Content-Disposition': download
