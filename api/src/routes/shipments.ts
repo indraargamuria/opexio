@@ -329,14 +329,15 @@ app.get("/:id/file", async (c) => {
     }
 
     let fileKey = shipment.r2FileKey;
-    let filenameSuffix = "";
+    let filenameSuffix = "-document";
 
     if (type === 'stamped') {
         if (!shipment.stampedFileKey) {
             return c.json({ error: "Stamped file not available" }, 404);
         }
         fileKey = shipment.stampedFileKey;
-        filenameSuffix = "-stamped";
+        filenameSuffix = "-document-withQR";
+
     } else if (!fileKey) {
         return c.json({ error: "No file attached" }, 404);
     }

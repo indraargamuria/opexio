@@ -17,7 +17,9 @@ app.use("/*", cors({
     return "http://localhost:5173"; // fallback
   },
   credentials: true,
+  exposeHeaders: ["Content-Length", "Content-Type", "Content-Disposition"],
 }));
+
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => {
   return auth(c.env, c.req.raw).handler(c.req.raw);

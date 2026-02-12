@@ -306,7 +306,8 @@ export default function ShipmentsPage() {
 
                 // Extract filename from Content-Disposition header
                 const contentDisposition = res.headers.get('Content-Disposition');
-                let filename = `${shipmentNumber}-document`;
+                let filename = `${shipmentNumber}-document${type === 'stamped' ? '-withQR' : ''}.pdf`;
+
 
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/i);
